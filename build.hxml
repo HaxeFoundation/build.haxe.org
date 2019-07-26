@@ -1,5 +1,5 @@
 -cp src
-# -lib hxnodejs
-# -main Indexer
-# -js index.js
---run Indexer
+-lib hxnodejs
+-lib hxnodelibs
+-main Index
+-js index.js

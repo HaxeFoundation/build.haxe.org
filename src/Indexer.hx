@@ -1,75 +1,30 @@
-import sys.io.*;
+import haxe.io.Path;
 using StringTools;
+
+typedef Record = {
+    date: String,
+    size: Int,
+    path: String,
+    fname: String,
+};
 
 class Indexer
 {
-    static function main():Void {
-        switch (Sys.args()) {
-            case []:
-                throw "missing s3 path argument";
-            case [s3path]:
-                index(s3path);
-        }
-    }
-
-
-
-    public static function index(s3path:String)
-    {
-        var spaceRegex = ~/[ \t]+/g,
-                s3pathRegex = ~/s3:\/\/([^\/]+)/;
-        if (!s3path.endsWith('/')) {
-            s3path = '$s3path/';
-        }
-
-        if (!s3pathRegex.match(s3path)) {
-            throw 'Invalid s3 path $s3path';
-        }
-
-        var basePath = 'http://' + s3pathRegex.matched(1) + '.s3-website-us-east-1.amazonaws.com' + s3pathRegex.matchedRight();
-        var proc = new Process('aws',['s3','ls',s3path,'--region','us-east-1']);
-        var records = [],
-                dirs = [];
-        try
-        {
-            var i = proc.stdout;
-            while(true)
-            {
-                var ln = spaceRegex.split(i.readLine());
-                // trace(ln);
-
-                inline function getPath(path:String)
-                {
-                    return basePath + path;
-                }
-                switch(ln[1])
-                {
-                    case 'PRE':
-                        dirs.push(getPath(ln[2]));
-                    case _:
-                        var size = ln[2];
-                        var path = ln[3];
-                        path = getPath(path);
-                        records.push({ date: ln[0] + ' ' + ln[1], size: ln[2], path: path, fname:haxe.io.Path.withoutDirectory(path) });
-                }
-            }
-        }
-        catch(e:haxe.io.Eof) {}
-
+    public static function buildIndexPage(dirs:Array<String>, records:Array<Record>):String {
         var maxSizes = { date:25, size:15, fname:0 };
         for (r in records)
         {
             if (r.date.length > maxSizes.date)
                 maxSizes.date = r.date.length;
-            if (r.size.length > maxSizes.size)
-                maxSizes.size = r.size.length;
+            if (Std.string(r.size).length > maxSizes.size)
+                maxSizes.size = Std.string(r.size).length;
             if (r.fname.length > maxSizes.fname)
                 maxSizes.fname = r.fname.length;
         }
         records.sort(function(v1,v2) return Reflect.compare(v2.date,v1.date));
-        var index = sys.io.File.write('index.html');
+        var buf = new StringBuf();
 
-        index.writeString(
+        buf.add(
 '
 <html>
 <head>
@@ -91,26 +46,26 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         inline function data(date:String,size:String,key:String,path:String)
         {
-            index.writeString(date.rpad(' ',maxSizes.date));
-            index.writeString(size.rpad(' ',maxSizes.size));
+            buf.add(date.rpad(' ',maxSizes.date));
+            buf.add(size.rpad(' ',maxSizes.size));
             if (path != null && path != '')
-                index.writeString('<a href="$path">$key</a>\n');
+                buf.add('<a href="$path">$key</a>\n');
             else
-                index.writeString('$key\n');
+                buf.add('$key\n');
         }
 
         data('Last Modified', 'Size', 'Path','');
         for (i in 0...(maxSizes.date + maxSizes.size + maxSizes.fname + 5))
-            index.writeString('-');
-        index.writeString('\n\n');
+            buf.add('-');
+        buf.add('\n\n');
 
         for (dir in dirs)
-            data('','DIR',haxe.io.Path.withoutDirectory(dir.substr(0,dir.length-1)),dir);
+            data('','DIR',Path.withoutDirectory(Path.removeTrailingSlashes(dir)),dir);
         for (r in records)
             if (r.fname != 'index.html')
-                data(r.date,r.size,r.fname,r.path);
+                data(r.date,Std.string(r.size),r.fname,r.fname);
 
-        index.writeString(
+        buf.add(
 '
 </pre>
 </div>
@@ -118,6 +73,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 </html>
 ');
 
-        index.close();
+        return buf.toString();
     }
 }
