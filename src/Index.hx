@@ -19,6 +19,7 @@ typedef ListObjectsV2Result = {
         Prefix: String,
     }>,
     KeyCount: Int,
+    NextContinuationToken: Null<String>,
 };
 
 class Index {
@@ -82,29 +83,41 @@ class Index {
             var prefix = Path.addTrailingSlash(req.path.split("/").filter(function(p) return p != "").join("/"));
             trace('listing ${prefix}');
 
-            s3.listObjectsV2({
+            var dirs = [];
+            var records = [];
+
+            function listAll(params, callb):Void {
+                s3.listObjectsV2(params, function(err, result:ListObjectsV2Result) {
+                    if (err != null) {
+                        next(err);
+                        return;
+                    }
+
+                    dirs = dirs.concat(result.CommonPrefixes.map(function(p) return p.Prefix.substr(result.Prefix.length)));
+                    records = records.concat([
+                        for (item in result.Contents)
+                        if (item.Key != prefix)
+                        {
+                            date: item.LastModified.toString(),
+                            size: item.Size,
+                            path: item.Key,
+                            fname: haxe.io.Path.withoutDirectory(item.Key),
+                        }
+                    ]);
+
+                    if (result.IsTruncated) {
+                        params.ContinuationToken = result.NextContinuationToken;
+                        listAll(params, callb);
+                    } else {
+                        callb();
+                    }
+                });
+            }
+            listAll({
                 Bucket: bucket,
                 Prefix: prefix,
                 Delimiter: '/',
-                MaxKeys: 10000,
-            }, function(err, result:ListObjectsV2Result) {
-                if (err != null) {
-                    next(err);
-                    return;
-                }
-
-                var dirs = result.CommonPrefixes.map(function(p) return p.Prefix.substr(result.Prefix.length));
-                var records = [
-                    for (item in result.Contents)
-                    if (item.Key != prefix)
-                    {
-                        date: item.LastModified.toString(),
-                        size: item.Size,
-                        path: item.Key,
-                        fname: haxe.io.Path.withoutDirectory(item.Key),
-                    }
-                ];
-
+            }, function(){
                 var indexPage = Indexer.buildIndexPage(dirs, records);
                 res.header('Content-Type', 'text/html');
                 res.send(indexPage);
