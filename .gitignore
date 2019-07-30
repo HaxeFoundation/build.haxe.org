@@ -3,3 +3,4 @@ index.html
 .haxelib
 .env
 node_modules
+.serverless

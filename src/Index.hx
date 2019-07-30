@@ -27,7 +27,10 @@ class Index {
         require('dotenv').config();
 
         var app = new Application();
-        var s3 = new js.npm.aws_sdk.S3();
+        var s3 = new js.npm.aws_sdk.S3({
+            accessKeyId: Sys.getEnv("HXBUILDS_AWS_ACCESS_KEY_ID"),
+            secretAccessKey: Sys.getEnv("HXBUILDS_AWS_SECRET_ACCESS_KEY"),
+        });
         var bucket = "hxbuilds";
 
         // get file

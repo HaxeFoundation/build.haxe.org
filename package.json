@@ -7,7 +7,8 @@
     "postinstall": "haxelib newrepo && haxelib dev hxnodelibs libs/hxnodelibs",
     "build": "haxe build.hxml",
     "start": "nodemon --watch index.js index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "dotenv sls deploy"
   },
   "author": "Haxe Foundation",
   "license": "CC0-1.0",
@@ -18,6 +19,8 @@
     "serverless-http": "^2.0.2"
   },
   "devDependencies": {
-    "nodemon": "^1.19.1"
+    "dotenv-cli": "^2.0.1",
+    "nodemon": "^1.19.1",
+    "serverless": "^1.49.0"
   }
 }
