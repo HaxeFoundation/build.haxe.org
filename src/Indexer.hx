@@ -10,6 +10,26 @@ typedef Record = {
 
 class Indexer
 {
+    static var googletagmanager_id = "GTM-M4JZKD";
+    static function googletagmanager(id:String) {
+        return "
+<!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','" + id + "');</script>
+<!-- End Google Tag Manager -->";
+    }
+
+    static function googletagmanager_noscript(id:String) {
+        return '
+<!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=' + id + '"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->';
+    }
+
     public static function buildIndexPage(dirs:Array<String>, records:Array<Record>):String {
         var maxSizes = { date:25, size:15, fname:0 };
         for (r in records)
@@ -25,21 +45,14 @@ class Indexer
         var buf = new StringBuf();
 
         buf.add(
-'
+'<!DOCTYPE html>
 <html>
 <head>
-<title>Haxe git builds</title>
+    <title>Haxe git builds</title>
+    ${googletagmanager(googletagmanager_id)}
 </head>
 <body>
-<!-- Google Tag Manager -->
-<noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-M4JZKD"
-height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({"gtm.start":
-    new Date().getTime(),event:"gtm.js"});var f=d.getElementsByTagName(s)[0],
-    j=d.createElement(s),dl=l!="dataLayer"?"&l="+l:"";j.async=true;j.src=
-    "//www.googletagmanager.com/gtm.js?id="+i+dl;f.parentNode.insertBefore(j,f);
-})(window,document,"script","dataLayer","GTM-M4JZKD");</script>
-<!-- End Google Tag Manager -->
+    ${googletagmanager_noscript(googletagmanager_id)}
     <div id="listing">
     <pre>
 ');
@@ -67,7 +80,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         buf.add(
 '
-</pre>
+    </pre>
 </div>
 </body>
 </html>

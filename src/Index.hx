@@ -1,5 +1,7 @@
 import js.Node.*;
 import js.npm.express.*;
+import haxe.io.*;
+using StringTools;
 
 typedef ListObjectsV2Result = {
     IsTruncated: Bool,
@@ -26,13 +28,59 @@ class Index {
 
         var app = new Application();
         var s3 = new js.npm.aws_sdk.S3();
+        var bucket = "hxbuilds";
 
+        // get file
         app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
+            // remove leading slash
+            var s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
+            var ext = Path.extension(Path.withoutDirectory(s3key));
+            switch (ext) {
+                case null, "":
+                    // it's not a file
+                    next();
+                    return;
+                case _:
+                    //pass
+            }
+
+            trace('getting ${s3key}');
+            var s3req = s3.getObject({
+                Bucket: bucket, 
+                Key: s3key,
+            });
+            var stream = s3req.createReadStream();
+            stream.on("error", function(err) {
+                if (err.code == "NoSuchKey") {
+                    res.status(404);
+                    res.header('Content-Type', 'text/plain');
+                    res.send("No such file.");
+                    return;
+                }
+
+                res.status(500);
+                res.header('Content-Type', 'text/plain');
+                res.send(haxe.Json.stringify(err, null, "  "));
+                return;
+            });
+            (untyped stream.pipe)(res);
+        });
+
+        // list directory
+        app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
+            // make sure there is a trailing slash
+            // or else the <a> links wouldn't work properly
+            if (!req.path.endsWith("/")) {
+                res.redirect(Path.addTrailingSlash(req.path));
+                return;
+            }
+
             // normalize the s3 prefix to NOT contain leading slash, but with a trailing slash
-            var prefix = haxe.io.Path.addTrailingSlash(req.path.split("/").filter(function(p) return p != "").join("/"));
+            var prefix = Path.addTrailingSlash(req.path.split("/").filter(function(p) return p != "").join("/"));
+            trace('listing ${prefix}');
 
             s3.listObjectsV2({
-                Bucket: "hxbuilds",
+                Bucket: bucket,
                 Prefix: prefix,
                 Delimiter: '/',
                 MaxKeys: 10000,
@@ -55,7 +103,7 @@ class Index {
                 ];
 
                 var indexPage = Indexer.buildIndexPage(dirs, records);
-
+                res.header('Content-Type', 'text/html');
                 res.send(indexPage);
             });
         });
