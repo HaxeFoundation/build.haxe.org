@@ -19,4 +19,5 @@ jobs:
         condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'), not(variables['System.PullRequest.PullRequestId']), variables['AWS_ACCESS_KEY_ID'])
         env:
           AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+          SERVERLESS_ACCESS_KEY: $(SERVERLESS_ACCESS_KEY)
         displayName: Deploy
