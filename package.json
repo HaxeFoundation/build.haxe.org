@@ -4,7 +4,7 @@
   "description": "Haxe Foundation snapshot build storage web UI.",
   "main": "index.js",
   "scripts": {
-    "postinstall": "haxelib newrepo && haxelib dev hxnodelibs libs/hxnodelibs",
+    "postinstall": "haxelib newrepo && haxelib dev hxnodelibs libs/hxnodelibs && haxelib install hxnodejs",
     "build": "haxe build.hxml",
     "start": "nodemon --watch index.js index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
