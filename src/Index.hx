@@ -1,4 +1,5 @@
 import js.Node.*;
+import js.node.*;
 import js.npm.express.*;
 import haxe.io.*;
 using StringTools;
@@ -53,8 +54,8 @@ class Index {
                 Bucket: bucket, 
                 Key: s3key,
             });
-            var stream = s3req.createReadStream();
-            stream.on("error", function(err) {
+            var s3stream = s3req.createReadStream();
+            s3stream.on("error", function(err) {
                 if (err.code == "NoSuchKey") {
                     res.status(404);
                     res.header('Content-Type', 'text/plain');
@@ -67,7 +68,12 @@ class Index {
                 res.send(haxe.Json.stringify(err, null, "  "));
                 return;
             });
-            (untyped stream.pipe)(res);
+            require('file-type').stream(s3stream)
+                .then(function(stream:Dynamic) {
+                    res.header('Content-Type', stream.fileType.mime);
+                    (untyped stream.pipe)(res);
+                    return null;
+                });
         });
 
         // list directory
