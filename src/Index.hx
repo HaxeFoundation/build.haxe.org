@@ -89,6 +89,9 @@ class Index {
             var prefix = Path.addTrailingSlash(req.path.split("/").filter(function(p) return p != "").join("/"));
             trace('listing ${prefix}');
 
+            if (prefix == "/")
+                prefix = "";
+
             var dirs = [];
             var records = [];
 
