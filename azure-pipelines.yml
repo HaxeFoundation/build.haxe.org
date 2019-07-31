@@ -1,0 +1,19 @@
+jobs:
+  - job: BuildAndDeploy
+    pool:
+      vmImage: 'ubuntu-16.04'
+    steps:
+      - checkout: self
+        submodules: recursive
+      - script: |
+          set -ex
+          sudo add-apt-repository ppa:haxe/haxe3.4
+          sudo apt-get update -qqy
+          sudo apt-get install haxe -qqy
+        displayName: Install Haxe
+      - script: npm install
+        displayName: Install libraries
+      - script: npm run-script build
+        displayName: Compile
+      - script: npm run-script deploy
+        displayName: Deploy
