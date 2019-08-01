@@ -23,6 +23,11 @@ typedef ListObjectsV2Result = {
     NextContinuationToken: Null<String>,
 };
 
+@:jsRequire("base64-stream", "Base64Encode")
+extern class Base64Encode {
+    public function new():Void;
+}
+
 class Index {
     static function main():Void {
         // for local dev: read env vars from .env, which contains AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
@@ -34,8 +39,11 @@ class Index {
             secretAccessKey: Sys.getEnv("HXBUILDS_AWS_SECRET_ACCESS_KEY"),
         });
         var bucket = "hxbuilds";
+        var region = "us-east-1";
 
         // get file
+        // This is mostly for local testing.
+        // Our CloudFront config has a behavior that directly serve *.zip, *.tar.tz, and *.nupkg with a S3 origin.
         app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
             // remove leading slash
             var s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
@@ -50,30 +58,30 @@ class Index {
             }
 
             trace('getting ${s3key}');
-            var s3req = s3.getObject({
+            var s3req = s3.headObject({
                 Bucket: bucket, 
                 Key: s3key,
             });
-            var s3stream = s3req.createReadStream();
-            s3stream.on("error", function(err) {
-                if (err.code == "NoSuchKey") {
-                    res.status(404);
-                    res.header('Content-Type', 'text/plain');
-                    res.send("No such file.");
-                    return;
+            s3req.promise().then(function(r:Dynamic){
+                switch (r.WebsiteRedirectLocation) {
+                    case null:
+                        res.redirect(Path.join(['https://${bucket}.s3.${region}.amazonaws.com', s3key]));
+                    case loc:
+                        res.redirect(Path.join(['https://${bucket}.s3.${region}.amazonaws.com', loc]));
                 }
-
-                res.status(500);
-                res.header('Content-Type', 'text/plain');
-                res.send(haxe.Json.stringify(err, null, "  "));
-                return;
+            }).catchError(function(err) {
+                switch (err.code) {
+                    case "NoSuchKey" | "NotFound":
+                        res.status(404);
+                        res.header('Content-Type', 'text/plain');
+                        res.send("No such file.");
+                        return;
+                    case _:
+                        res.status(500);
+                        res.header('Content-Type', 'text/plain');
+                        res.send(haxe.Json.stringify(err, null, "  "));
+                }
             });
-            require('file-type').stream(s3stream)
-                .then(function(stream:Dynamic) {
-                    res.header('Content-Type', stream.fileType.mime);
-                    (untyped stream.pipe)(res);
-                    return null;
-                });
         });
 
         // list directory
