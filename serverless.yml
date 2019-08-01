@@ -26,3 +26,9 @@ functions:
           method: ANY
           path: '{proxy+}'
           cors: true
+
+package:
+  exclude:
+    - .haxelib/**
+    - libs/**
+    - src/**
