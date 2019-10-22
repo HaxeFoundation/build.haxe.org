@@ -22,5 +22,6 @@
     "dotenv-cli": "^2.0.1",
     "nodemon": "^1.19.1",
     "serverless": "^1.49.0"
-  }
+  },
+  "private": true
 }
