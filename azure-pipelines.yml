@@ -15,8 +15,9 @@ jobs:
         displayName: Install libraries
       - script: |
           set -ex
-          sudo apt install -qqy python3-setuptools python3-pip
+          sudo apt install -qqy python3-setuptools python3-pip python3-wheel
           pip3 install html5validator
+          html5validator --version
         displayName: Install html5validator
       - script: npm run-script build
         displayName: Compile
