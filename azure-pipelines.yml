@@ -13,9 +13,9 @@ jobs:
         displayName: Install Haxe
       - script: npm install
         displayName: Install libraries
+      - task: UsePythonVersion@0
       - script: |
           set -ex
-          sudo apt install -qqy python3-setuptools python3-pip python3-wheel
           pip3 install html5validator
           html5validator --version
         displayName: Install html5validator
