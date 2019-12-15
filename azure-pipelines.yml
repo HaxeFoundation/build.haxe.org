@@ -1,77 +1,109 @@
-jobs:
-  - job: BuildAndDeploy
-    pool:
-      vmImage: 'ubuntu-16.04'
-    steps:
-      - checkout: self
-        submodules: recursive
-      - script: |
-          set -ex
-          sudo add-apt-repository ppa:haxe/haxe3.4
-          sudo apt-get update -qqy
-          sudo apt-get install haxe -qqy
-        displayName: Install Haxe
-      - script: npm install
-        displayName: Install libraries
-      - task: UsePythonVersion@0
-      - script: |
-          set -ex
-          pip3 install html5validator
-          html5validator --version
-        displayName: Install html5validator
-      - script: npm run-script build
-        displayName: Compile
-      - script: |
-          set -ex
-          npm start &
-          sleep 3
+stages:
+  - stage: BuildAndTest
+    jobs:
+      - job: Build
+        pool:
+          vmImage: 'ubuntu-16.04'
+        steps:
+          - checkout: self
+            submodules: recursive
+          - script: |
+              set -ex
+              sudo add-apt-repository ppa:haxe/haxe3.4
+              sudo apt-get update -qqy
+              sudo apt-get install haxe -qqy
+            displayName: Install Haxe
+          - script: npm install
+            displayName: Install npm libraries
+          - script: npm run-script build
+            displayName: Compile
+          - publish: index.js
+            artifact: index.js
+      - job: Test
+        dependsOn: Build
         condition: and(succeeded(), variables['AWS_ACCESS_KEY_ID'])
-        env:
-          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-        displayName: Start local server
-      - script: |
-          set -ex
-          html5validator --html http://localhost:3000
-          html5validator --html http://localhost:3000/builds/haxe/linux64/
-          html5validator --html http://localhost:3000/builds/haxe/mac/
-          html5validator --html http://localhost:3000/builds/haxe/windows/
-          html5validator --html http://localhost:3000/builds/haxe/windows64/
-          html5validator --html http://localhost:3000/builds/neko/linux64/
-          html5validator --html http://localhost:3000/builds/neko/mac/
-          html5validator --html http://localhost:3000/builds/neko/windows/
-          html5validator --html http://localhost:3000/builds/neko/windows64/
-        displayName: Validate HTML
-      - script: npm run-script deploy
-        condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'), not(variables['System.PullRequest.PullRequestId']), variables['AWS_ACCESS_KEY_ID'])
-        env:
-          AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
-          SERVERLESS_ACCESS_KEY: $(SERVERLESS_ACCESS_KEY)
-        displayName: Deploy
-      - script: |
-          set -ex
-          curl -sSLf https://build.haxe.org -o /dev/null
-          # Haxe
-          curl -sSLf https://build.haxe.org/builds/haxe/linux64/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/linux64/haxe_latest.tar.gz -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/mac/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/mac/haxe_latest.tar.gz -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/mac-installer/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/mac-installer/haxe_latest.tar.gz -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows/haxe_latest.zip -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows-installer/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows-installer/haxe_latest.zip -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows64/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows64/haxe_latest.zip -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows64-installer/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/haxe/windows64-installer/haxe_latest.zip -o /dev/null
-          # Neko
-          curl -sSLf https://build.haxe.org/builds/neko/linux64/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/neko/linux64/neko_latest.tar.gz -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/neko/mac/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/neko/mac/neko_latest.tar.gz -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/neko/windows/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/neko/windows/neko_latest.zip -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/neko/windows64/ -o /dev/null
-          curl -sSLf https://build.haxe.org/builds/neko/windows64/neko_latest.zip -o /dev/null
-        displayName: Verify common URLs
+        pool:
+          vmImage: 'ubuntu-16.04'
+        steps:
+          - script: npm install
+            displayName: Install npm libraries
+          - download: current
+          - script: mv $(Pipeline.Workspace)/index.js/index.js $(Build.SourcesDirectory)
+            displayName: Move artifacts
+          - task: UsePythonVersion@0
+          - script: |
+              set -ex
+              pip3 install html5validator
+              html5validator --version
+            displayName: Install html5validator
+          - script: |
+              set -ex
+              npm start &
+              sleep 3
+            env:
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+            displayName: Start local server
+          - script: |
+              set -ex
+              html5validator --html http://localhost:3000
+              html5validator --html http://localhost:3000/builds/haxe/linux64/
+              html5validator --html http://localhost:3000/builds/haxe/mac/
+              html5validator --html http://localhost:3000/builds/haxe/windows/
+              html5validator --html http://localhost:3000/builds/haxe/windows64/
+              html5validator --html http://localhost:3000/builds/neko/linux64/
+              html5validator --html http://localhost:3000/builds/neko/mac/
+              html5validator --html http://localhost:3000/builds/neko/windows/
+              html5validator --html http://localhost:3000/builds/neko/windows64/
+            displayName: Validate HTML
+  - stage: Deploy
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'), not(variables['System.PullRequest.PullRequestId']), variables['AWS_ACCESS_KEY_ID'])
+    jobs:
+      - job: Deploy
+        pool:
+          vmImage: 'ubuntu-16.04'
+        steps:
+          - script: npm install
+            displayName: Install npm libraries
+          - download: current
+          - script: mv $(Pipeline.Workspace)/index.js/index.js $(Build.SourcesDirectory)
+            displayName: Move artifacts
+          - script: npm run-script deploy
+            env:
+              AWS_SECRET_ACCESS_KEY: $(AWS_SECRET_ACCESS_KEY)
+              SERVERLESS_ACCESS_KEY: $(SERVERLESS_ACCESS_KEY)
+            displayName: Deploy
+  - stage: Verify
+    jobs:
+      - job: Verify
+        pool:
+          vmImage: 'ubuntu-16.04'
+        steps:
+          - checkout: none
+          - script: |
+              set -ex
+              curl -sSLf https://build.haxe.org -o /dev/null
+              # Haxe
+              curl -sSLf https://build.haxe.org/builds/haxe/linux64/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/linux64/haxe_latest.tar.gz -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/mac/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/mac/haxe_latest.tar.gz -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/mac-installer/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/mac-installer/haxe_latest.tar.gz -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows/haxe_latest.zip -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows-installer/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows-installer/haxe_latest.zip -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows64/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows64/haxe_latest.zip -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows64-installer/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/haxe/windows64-installer/haxe_latest.zip -o /dev/null
+              # Neko
+              curl -sSLf https://build.haxe.org/builds/neko/linux64/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/neko/linux64/neko_latest.tar.gz -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/neko/mac/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/neko/mac/neko_latest.tar.gz -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/neko/windows/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/neko/windows/neko_latest.zip -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/neko/windows64/ -o /dev/null
+              curl -sSLf https://build.haxe.org/builds/neko/windows64/neko_latest.zip -o /dev/null
+            displayName: Verify common URLs
