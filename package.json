@@ -18,7 +18,7 @@
     "serverless-http": "2.5.0"
   },
   "devDependencies": {
-    "dotenv-cli": "3.1.0",
+    "dotenv-cli": "3.2.0",
     "nodemon": "2.0.4",
     "serverless": "1.73.1"
   },
