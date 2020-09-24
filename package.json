@@ -20,7 +20,7 @@
   "devDependencies": {
     "dotenv-cli": "3.2.0",
     "nodemon": "2.0.4",
-    "serverless": "2.1.1"
+    "serverless": "2.2.0"
   },
   "private": true
 }
