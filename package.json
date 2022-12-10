@@ -14,7 +14,7 @@
   "dependencies": {
     "aws-sdk": "2.831.0",
     "dotenv": "8.2.0",
-    "express": "4.17.1",
+    "express": "4.17.3",
     "serverless-http": "2.7.0"
   },
   "devDependencies": {
