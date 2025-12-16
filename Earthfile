@@ -33,7 +33,8 @@ build.haxe.org:
     EXPOSE 3000
     CMD ["node", "index.js"]
     ARG EARTHLY_GIT_HASH
-    SAVE IMAGE --push ghcr.io/haxefoundation/build.haxe.org:$EARTHLY_GIT_HASH
+    ARG IMAGE=ghcr.io/haxefoundation/build.haxe.org:$EARTHLY_GIT_HASH
+    SAVE IMAGE --push $IMAGE
 
 run:
     LOCALLY
