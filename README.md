@@ -1,7 +1,5 @@
 # build.haxe.org
 
-[![Build Status](https://dev.azure.com/HaxeFoundation/GitHubPublic/_apis/build/status/HaxeFoundation.build.haxe.org?branchName=master)](https://dev.azure.com/HaxeFoundation/GitHubPublic/_build/latest?definitionId=6&branchName=master)
-
 This is the minimal web UI ([https://build.haxe.org](https://build.haxe.org)) for Haxe Foundation's snapshot build storage. The storage itself is using AWS S3. This UI is served by AWS Lambda with a CloudFront reverse proxy.
 
 The file name and URL format is quite stable, though we're not fully commit to that and you should make sure to follow redirections when using the files programmatically, such that when we move the files, we can maintain backward compatibility with redirection.
