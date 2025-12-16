@@ -34,10 +34,11 @@ class Index {
         require('dotenv').config();
 
         var app = new Application();
-        var s3 = new js.npm.aws_sdk.S3({
+        var awsAuth = {
             accessKeyId: Sys.getEnv("HXBUILDS_AWS_ACCESS_KEY_ID"),
             secretAccessKey: Sys.getEnv("HXBUILDS_AWS_SECRET_ACCESS_KEY"),
-        });
+        }
+        var s3 = new js.npm.aws_sdk.S3(awsAuth);
         var bucket = "hxbuilds";
         var region = "us-east-1";
 
@@ -139,6 +140,10 @@ class Index {
                 res.header('Content-Type', 'text/html');
                 res.send(indexPage);
             });
+        });
+
+        js.Node.process.on('SIGINT', function() {
+            js.Node.process.exit();
         });
 
         var isMain = (untyped __js__("require")).main == module;
