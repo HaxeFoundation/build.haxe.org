@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          submodules: recursive
       - name: Log in to ghcr.io
         uses: docker/login-action@v3
         with:
@@ -24,4 +26,4 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           version: v0.8.16
       - name: Build and push image
-        run: earthly --ci --push +build --IMAGE=ghcr.io/haxefoundation/build.haxe.org:${{ github.sha }}
+        run: earthly --ci --push +build.haxe.org --IMAGE=ghcr.io/haxefoundation/build.haxe.org:${{ github.sha }}
