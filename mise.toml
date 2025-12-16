@@ -1,0 +1,4 @@
+[tools]
+earthly = "0.8.16"
+node = "24.12.0"
+terraform = "1.5.7"
