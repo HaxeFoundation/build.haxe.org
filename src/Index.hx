@@ -43,8 +43,6 @@ class Index {
         var region = "us-east-1";
 
         // get file
-        // This is mostly for local testing.
-        // Our CloudFront config has a behavior that directly serve *.zip, *.tar.tz, and *.nupkg with a S3 origin.
         app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
             // remove leading slash
             var s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
@@ -63,12 +61,13 @@ class Index {
                 Bucket: bucket, 
                 Key: s3key,
             });
+            final publicHost = "https://hxbuilds-hjtpx7fj.haxe.org";
             s3req.promise().then(function(r:Dynamic){
                 switch (r.WebsiteRedirectLocation) {
                     case null:
-                        res.redirect(Path.join(['https://${bucket}.s3.${region}.amazonaws.com', s3key]));
+                        res.redirect(Path.join([publicHost, s3key]));
                     case loc:
-                        res.redirect(Path.join(['https://${bucket}.s3.${region}.amazonaws.com', loc]));
+                        res.redirect(Path.join([publicHost, loc]));
                 }
             }).catchError(function(err) {
                 switch (err.code) {
