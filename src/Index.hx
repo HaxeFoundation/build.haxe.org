@@ -30,9 +30,6 @@ extern class Base64Encode {
 
 class Index {
     static function main():Void {
-        // for local dev: read env vars from .env, which contains AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-        require('dotenv').config();
-
         var app = new Application();
         var awsAuth = {
             accessKeyId: Sys.getEnv("HXBUILDS_AWS_ACCESS_KEY_ID"),
@@ -145,14 +142,8 @@ class Index {
             js.Node.process.exit();
         });
 
-        var isMain = (untyped __js__("require")).main == module;
-        if (isMain) {
-            app.listen(3000, function(){
-                trace("http://localhost:3000");
-            });
-        } else {
-            var serverless = require('serverless-http');
-            js.Node.exports.handler = serverless(app);
-        }
+        app.listen(3000, function(){
+            trace("http://localhost:3000");
+        });
     }
 }
