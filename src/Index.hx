@@ -30,20 +30,20 @@ extern class Base64Encode {
 
 class Index {
     static function main():Void {
-        var app = new Application();
-        var awsAuth = {
+        final app = new Application();
+        final awsAuth = {
             accessKeyId: Sys.getEnv("HXBUILDS_AWS_ACCESS_KEY_ID"),
             secretAccessKey: Sys.getEnv("HXBUILDS_AWS_SECRET_ACCESS_KEY"),
         }
-        var s3 = new js.npm.aws_sdk.S3(awsAuth);
-        var bucket = "hxbuilds";
-        var region = "us-east-1";
+        final s3 = new js.npm.aws_sdk.S3(awsAuth);
+        final bucket = "hxbuilds";
+        final region = "us-east-1";
 
         // get file
         app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
             // remove leading slash
-            var s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
-            var ext = Path.extension(Path.withoutDirectory(s3key));
+            final s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
+            final ext = Path.extension(Path.withoutDirectory(s3key));
             switch (ext) {
                 case null, "":
                     // it's not a file
@@ -54,7 +54,7 @@ class Index {
             }
 
             trace('getting ${s3key}');
-            var s3req = s3.headObject({
+            final s3req = s3.headObject({
                 Bucket: bucket, 
                 Key: s3key,
             });
@@ -132,7 +132,7 @@ class Index {
                 Prefix: prefix,
                 Delimiter: '/',
             }, function(){
-                var indexPage = Indexer.buildIndexPage(dirs, records);
+                final indexPage = Indexer.buildIndexPage(dirs, records);
                 res.header('Content-Type', 'text/html');
                 res.send(indexPage);
             });

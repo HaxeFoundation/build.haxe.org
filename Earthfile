@@ -21,7 +21,7 @@ index.js:
     RUN haxelib dev hxnodelibs libs/hxnodelibs
     COPY --dir src .
     COPY build.hxml .
-    RUN haxe build.hxml -D no-deprecation-warnings
+    RUN haxe build.hxml
     SAVE ARTIFACT index.js AS LOCAL index.js
 
 build.haxe.org:

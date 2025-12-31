@@ -10,12 +10,12 @@ typedef Record = {
 
 class Indexer
 {
-    static var googletagmanager_id = "GTM-M4JZKD";
+    static final googletagmanager_id = "GTM-M4JZKD";
     static function googletagmanager(id:String) {
         return "
 <!-- Google Tag Manager -->
 <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+new Date().getTime(),event:'gtm.js'});final f=d.getElementsByTagName(s)[0],
 j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','" + id + "');</script>
@@ -31,7 +31,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
 
     public static function buildIndexPage(dirs:Array<String>, records:Array<Record>):String {
-        var maxSizes = { date:25, size:15, fname:0 };
+        final maxSizes = { date:25, size:15, fname:0 };
         for (r in records)
         {
             if (r.date.length > maxSizes.date)
@@ -42,7 +42,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 maxSizes.fname = r.fname.length;
         }
         records.sort(function(v1,v2) return Reflect.compare(v2.date,v1.date));
-        var buf = new StringBuf();
+        final buf = new StringBuf();
 
         buf.add(
 '<!DOCTYPE html>
