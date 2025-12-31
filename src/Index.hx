@@ -1,3 +1,5 @@
+import Indexer.Record;
+import js.lib.Promise;
 import js.Node.*;
 import js.node.*;
 import js.npm.express.*;
@@ -39,11 +41,61 @@ class Index {
         final bucket = "hxbuilds";
         final region = "us-east-1";
 
+        function listDirectory(path:String):Promise<{dirs:Array<String>, files:Array<Record>}> {
+            return new Promise(function(resolve, reject) {
+                // normalize the s3 prefix to NOT contain leading slash, but with a trailing slash
+                final prefix = switch (Path.addTrailingSlash(path.split("/").filter(p -> p != "").join("/"))) {
+                    case "/":
+                        "";
+                    case p:
+                        p;
+                }
+                trace('listing ${prefix}');
+
+                var dirs = [];
+                var records = [];
+
+                function listAll(params):Void {
+                    s3.listObjectsV2(params, function(err, result:ListObjectsV2Result) {
+                        if (err != null) {
+                            reject(err);
+                            return;
+                        }
+
+                        dirs = dirs.concat(result.CommonPrefixes.map(function(p) return p.Prefix.substr(result.Prefix.length)));
+                        records = records.concat([
+                            for (item in result.Contents)
+                            if (item.Key != prefix)
+                            {
+                                date: item.LastModified.toString(),
+                                size: item.Size,
+                                path: item.Key,
+                                fname: haxe.io.Path.withoutDirectory(item.Key),
+                            }
+                        ]);
+
+                        if (result.IsTruncated) {
+                            params.ContinuationToken = result.NextContinuationToken;
+                            listAll(params);
+                        } else {
+                            resolve({ dirs: dirs, files: records });
+                        }
+                    });
+                }
+                listAll({
+                    Bucket: bucket,
+                    Prefix: prefix,
+                    Delimiter: '/',
+                });
+            });
+        }
+
         // get file
         app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
             // remove leading slash
             final s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
-            final ext = Path.extension(Path.withoutDirectory(s3key));
+            final fileName = Path.withoutDirectory(s3key);
+            final ext = Path.extension(fileName);
             switch (ext) {
                 case null, "":
                     // it's not a file
@@ -90,52 +142,17 @@ class Index {
                 return;
             }
 
-            // normalize the s3 prefix to NOT contain leading slash, but with a trailing slash
-            var prefix = Path.addTrailingSlash(req.path.split("/").filter(function(p) return p != "").join("/"));
-            trace('listing ${prefix}');
-
-            if (prefix == "/")
-                prefix = "";
-
-            var dirs = [];
-            var records = [];
-
-            function listAll(params, callb):Void {
-                s3.listObjectsV2(params, function(err, result:ListObjectsV2Result) {
-                    if (err != null) {
-                        next(err);
-                        return;
-                    }
-
-                    dirs = dirs.concat(result.CommonPrefixes.map(function(p) return p.Prefix.substr(result.Prefix.length)));
-                    records = records.concat([
-                        for (item in result.Contents)
-                        if (item.Key != prefix)
-                        {
-                            date: item.LastModified.toString(),
-                            size: item.Size,
-                            path: item.Key,
-                            fname: haxe.io.Path.withoutDirectory(item.Key),
-                        }
-                    ]);
-
-                    if (result.IsTruncated) {
-                        params.ContinuationToken = result.NextContinuationToken;
-                        listAll(params, callb);
-                    } else {
-                        callb();
-                    }
+            listDirectory(req.path)
+                .then(function(result) {
+                    final indexPage = Indexer.buildIndexPage(result.dirs, result.files);
+                    res.header('Content-Type', 'text/html');
+                    res.send(indexPage);
+                })
+                .catchError(function(err) {
+                    res.status(500);
+                    res.header('Content-Type', 'text/plain');
+                    res.send(haxe.Json.stringify(err, null, "  "));
                 });
-            }
-            listAll({
-                Bucket: bucket,
-                Prefix: prefix,
-                Delimiter: '/',
-            }, function(){
-                final indexPage = Indexer.buildIndexPage(dirs, records);
-                res.header('Content-Type', 'text/html');
-                res.send(indexPage);
-            });
         });
 
         js.Node.process.on('SIGINT', function() {
