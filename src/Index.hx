@@ -5,6 +5,7 @@ import js.node.*;
 import js.npm.express.*;
 import haxe.io.*;
 using StringTools;
+using Lambda;
 
 typedef ListObjectsV2Result = {
     IsTruncated: Bool,
@@ -42,6 +43,7 @@ class Index {
         final region = "us-east-1";
 
         function listDirectory(path:String):Promise<{dirs:Array<String>, files:Array<Record>}> {
+            // trace('listing directory ${path}');
             return new Promise(function(resolve, reject) {
                 // normalize the s3 prefix to NOT contain leading slash, but with a trailing slash
                 final prefix = switch (Path.addTrailingSlash(path.split("/").filter(p -> p != "").join("/"))) {
@@ -71,6 +73,7 @@ class Index {
                                 size: item.Size,
                                 path: item.Key,
                                 fname: haxe.io.Path.withoutDirectory(item.Key),
+                                etag: item.ETag,
                             }
                         ]);
 
@@ -90,13 +93,51 @@ class Index {
             });
         }
 
+        // get *_latest.* file
+        app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
+            // remove leading slash
+            final s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
+            final fileName = Path.withoutDirectory(s3key);
+
+            final latestRegex = ~/_latest\.(zip|tar\.gz|nupkg)$/;
+            if (!latestRegex.match(fileName)) {
+                next();
+                return;
+            }
+            listDirectory(Path.directory(s3key))
+                .then(function(result){
+                    final latest = result.files.find(r -> r.fname == fileName);
+                    if (latest == null) {
+                        res.status(404);
+                        res.header('Content-Type', 'text/plain');
+                        res.send("No such file.");
+                        return;
+                    }
+                    final actual = result.files.find(r -> r.fname != fileName && r.etag == latest.etag);
+                    if (actual != null) {
+                        final maxAge = 60 * 5; // 5 minutes
+                        final staleWhileRevalidate = 60 * 1; // 1 minutes
+                        res.setHeader("Cache-Control", 'public, max-age=${maxAge}, stale-while-revalidate=$staleWhileRevalidate');
+                        res.redirect(actual.fname);
+                        return;
+                    }
+                    // fallback to directly serving the _latest file
+                    next();
+                })
+                .catchError(function(err) {
+                    res.status(500);
+                    res.header('Content-Type', 'text/plain');
+                    res.send(haxe.Json.stringify(err, null, "  "));
+                });
+        });
+
         // get file
         app.use(function (req:Request, res:Response, next:haxe.Constraints.Function) {
             // remove leading slash
             final s3key = req.path.startsWith("/") ? req.path.substr(1) : req.path;
             final fileName = Path.withoutDirectory(s3key);
-            final ext = Path.extension(fileName);
-            switch (ext) {
+
+            switch (Path.extension(fileName)) {
                 case null, "":
                     // it's not a file
                     next();

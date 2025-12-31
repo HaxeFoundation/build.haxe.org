@@ -6,6 +6,7 @@ typedef Record = {
     size: Int,
     path: String,
     fname: String,
+    etag: String,
 };
 
 class Indexer
