@@ -3,6 +3,7 @@ import js.lib.Promise;
 import js.Node.*;
 import js.node.*;
 import js.npm.express.*;
+import js.npm.aws_sdk.client_s3.S3Client;
 import js.npm.aws_sdk.client_s3.HeadObjectCommand;
 import js.npm.aws_sdk.client_s3.PaginateListObjectsV2.paginateListObjectsV2;
 import haxe.io.*;
@@ -17,15 +18,29 @@ extern class Base64Encode {
 class Index {
     static function main():Void {
         final app = new Application();
-        final awsAuth = {
-            accessKeyId: Sys.getEnv("HXBUILDS_AWS_ACCESS_KEY_ID"),
-            secretAccessKey: Sys.getEnv("HXBUILDS_AWS_SECRET_ACCESS_KEY"),
+        final config:S3ClientConfig = {
+            credentials: {
+                accessKeyId: Sys.getEnv("HXBUILDS_ACCESS_KEY_ID"),
+                secretAccessKey: Sys.getEnv("HXBUILDS_SECRET_ACCESS_KEY"),
+            },
+            region: switch (Sys.getEnv("HXBUILDS_REGION")) {
+                case null: "us-east-1";
+                case region: region;
+            }
         }
-        final s3 = new js.npm.aws_sdk.client_s3.S3Client({
-            region: "us-east-1",
-            credentials: awsAuth,
-        });
-        final bucket = "hxbuilds";
+        switch (Sys.getEnv("HXBUILDS_ENDPOINT")) {
+            case null: // pass
+            case endpoint: config.endpoint = endpoint;
+        }
+        switch (Sys.getEnv("HXBUILDS_FORCE_PATH_STYLE")) {
+            case null | "false": // pass
+            case "true": config.forcePathStyle = true;
+        }
+        final s3 = new js.npm.aws_sdk.client_s3.S3Client(config);
+        final bucket = switch (Sys.getEnv("HXBUILDS_BUCKET")) {
+            case null: "hxbuilds";
+            case v: v;
+        };
 
         function listDirectory(path:String):Promise<{dirs:Array<String>, files:Array<Record>}> {
             // trace('listing directory ${path}');
