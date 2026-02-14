@@ -3,28 +3,11 @@ import js.lib.Promise;
 import js.Node.*;
 import js.node.*;
 import js.npm.express.*;
+import js.npm.aws_sdk.client_s3.HeadObjectCommand;
+import js.npm.aws_sdk.client_s3.PaginateListObjectsV2.paginateListObjectsV2;
 import haxe.io.*;
 using StringTools;
 using Lambda;
-
-typedef ListObjectsV2Result = {
-    IsTruncated: Bool,
-    Contents: Array<{
-        Key: String,
-        LastModified: Date,
-        ETag: String,
-        Size: Int,
-        StorageClass: String,
-    }>,
-    Name: String,
-    Prefix: String,
-    MaxKeys: Int,
-    CommonPrefixes: Array<{
-        Prefix: String,
-    }>,
-    KeyCount: Int,
-    NextContinuationToken: Null<String>,
-};
 
 @:jsRequire("base64-stream", "Base64Encode")
 extern class Base64Encode {
@@ -38,9 +21,11 @@ class Index {
             accessKeyId: Sys.getEnv("HXBUILDS_AWS_ACCESS_KEY_ID"),
             secretAccessKey: Sys.getEnv("HXBUILDS_AWS_SECRET_ACCESS_KEY"),
         }
-        final s3 = new js.npm.aws_sdk.S3(awsAuth);
+        final s3 = new js.npm.aws_sdk.client_s3.S3Client({
+            region: "us-east-1",
+            credentials: awsAuth,
+        });
         final bucket = "hxbuilds";
-        final region = "us-east-1";
 
         function listDirectory(path:String):Promise<{dirs:Array<String>, files:Array<Record>}> {
             // trace('listing directory ${path}');
@@ -57,39 +42,45 @@ class Index {
                 var dirs = [];
                 var records = [];
 
-                function listAll(params):Void {
-                    s3.listObjectsV2(params, function(err, result:ListObjectsV2Result) {
-                        if (err != null) {
-                            reject(err);
-                            return;
-                        }
-
-                        dirs = dirs.concat(result.CommonPrefixes.map(function(p) return p.Prefix.substr(result.Prefix.length)));
-                        records = records.concat([
-                            for (item in result.Contents)
-                            if (item.Key != prefix)
-                            {
-                                date: item.LastModified.toString(),
-                                size: item.Size,
-                                path: item.Key,
-                                fname: haxe.io.Path.withoutDirectory(item.Key),
-                                etag: item.ETag,
-                            }
-                        ]);
-
-                        if (result.IsTruncated) {
-                            params.ContinuationToken = result.NextContinuationToken;
-                            listAll(params);
-                        } else {
-                            resolve({ dirs: dirs, files: records });
-                        }
-                    });
-                }
-                listAll({
+                final paginator = paginateListObjectsV2({
+                    client: s3,
+                }, {
                     Bucket: bucket,
                     Prefix: prefix,
                     Delimiter: '/',
                 });
+                function listAll():Void {
+                    paginator.next()
+                        .then(function(result) {
+                            if (result.done) {
+                                resolve({ dirs: dirs, files: records });
+                                return;
+                            }
+                            final data = result.value;
+                            if (data.CommonPrefixes != null) {
+                                dirs = dirs.concat(data.CommonPrefixes.map(function(p) return p.Prefix.substr(data.Prefix.length)));
+                            }
+                            if (data.Contents != null) {
+                                records = records.concat([
+                                    for (item in data.Contents)
+                                    if (item.Key != prefix)
+                                    {
+                                        date: item.LastModified.toString(),
+                                        size: item.Size,
+                                        path: item.Key,
+                                        fname: haxe.io.Path.withoutDirectory(item.Key),
+                                        etag: item.ETag,
+                                    }
+                                ]);
+                            }
+                            listAll();
+                        })
+                        .catchError(function(err) {
+                            trace(err);
+                            reject(err);
+                        });
+                }
+                listAll();
             });
         }
 
@@ -147,31 +138,33 @@ class Index {
             }
 
             trace('getting ${s3key}');
-            final s3req = s3.headObject({
+            final headReq = new HeadObjectCommand({
                 Bucket: bucket, 
                 Key: s3key,
             });
             final publicHost = "https://hxbuilds-hjtpx7fj.haxe.org";
-            s3req.promise().then(function(r:Dynamic){
-                switch (r.WebsiteRedirectLocation) {
-                    case null:
-                        res.redirect(Path.join([publicHost, s3key]));
-                    case loc:
-                        res.redirect(Path.join([publicHost, loc]));
-                }
-            }).catchError(function(err) {
-                switch (err.code) {
-                    case "NoSuchKey" | "NotFound":
-                        res.status(404);
-                        res.header('Content-Type', 'text/plain');
-                        res.send("No such file.");
-                        return;
-                    case _:
-                        res.status(500);
-                        res.header('Content-Type', 'text/plain');
-                        res.send(haxe.Json.stringify(err, null, "  "));
-                }
-            });
+            s3.send(headReq)
+                .then(function(r){
+                    switch (r.WebsiteRedirectLocation) {
+                        case null:
+                            res.redirect(Path.join([publicHost, s3key]));
+                        case loc:
+                            res.redirect(Path.join([publicHost, loc]));
+                    }
+                })
+                .catchError(function(err) {
+                    switch (err.code) {
+                        case "NoSuchKey" | "NotFound":
+                            res.status(404);
+                            res.header('Content-Type', 'text/plain');
+                            res.send("No such file.");
+                            return;
+                        case _:
+                            res.status(500);
+                            res.header('Content-Type', 'text/plain');
+                            res.send(haxe.Json.stringify(err, null, "  "));
+                    }
+                });
         });
 
         // list directory

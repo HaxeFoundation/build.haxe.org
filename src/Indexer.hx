@@ -3,7 +3,7 @@ using StringTools;
 
 typedef Record = {
     date: String,
-    size: Int,
+    size: Float,
     path: String,
     fname: String,
     etag: String,
