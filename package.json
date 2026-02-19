@@ -11,11 +11,11 @@
   "author": "Haxe Foundation",
   "license": "CC0-1.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.987.0",
-    "express": "5.2.1"
+    "@aws-sdk/client-s3": "^3.993.0",
+    "express": "^5.2.1"
   },
   "devDependencies": {
-    "nodemon": "3.1.11"
+    "nodemon": "^3.1.11"
   },
   "private": true
 }
