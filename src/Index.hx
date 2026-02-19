@@ -204,12 +204,19 @@ class Index {
                 });
         });
 
-        js.Node.process.on('SIGINT', function() {
-            js.Node.process.exit();
-        });
-
-        app.listen(3000, function(){
+        final server = app.listen(3000, function(){
             trace("http://localhost:3000");
         });
+
+        function gracefulShutdown() {
+            trace("Shutting down...");
+            server.close(function() {
+                trace("Server closed.");
+                js.Node.process.exit();
+            });
+        }
+
+        js.Node.process.on('SIGINT', gracefulShutdown);
+        js.Node.process.on('SIGTERM', gracefulShutdown);
     }
 }
