@@ -42,7 +42,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             if (r.fname.length > maxSizes.fname)
                 maxSizes.fname = r.fname.length;
         }
-        records.sort(function(v1,v2) return Reflect.compare(v2.date,v1.date));
+        records.sort(function(v1,v2) return Reflect.compare(v2.fname,v1.fname));
         final buf = new StringBuf();
 
         buf.add(
