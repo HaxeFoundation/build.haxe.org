@@ -31,6 +31,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <!-- End Google Tag Manager (noscript) -->';
     }
 
+    static function getDateStr(v:String):Null<String> {
+        final dateRegex = ~/[0-9]{4}-[0-9]{2}-[0-9]{2}/;
+        return dateRegex.match(v) ? dateRegex.matched(0) : null;
+    }
+
     public static function buildIndexPage(dirs:Array<String>, records:Array<Record>):String {
         final maxSizes = { date:25, size:15, fname:0 };
         for (r in records)
@@ -42,7 +47,20 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             if (r.fname.length > maxSizes.fname)
                 maxSizes.fname = r.fname.length;
         }
-        records.sort(function(v1,v2) return Reflect.compare(v2.fname,v1.fname));
+        // sort files
+        // 1. by date in filename (newest first)
+        // 2. by last modified date (newest first) if date in filename is the same
+        // 3. by filename if no date in filename
+        records.sort(function(v1,v2) {
+            return switch [getDateStr(v1.fname), getDateStr(v2.fname)] {
+                case [d1, d2] if (d1 != null && d2 != null && d1 != d2):
+                    Reflect.compare(d2, d1);
+                case [d1, d2] if (d1 != null && d2 != null && d1 == d2):
+                    Reflect.compare(v2.date, v1.date);
+                case _:
+                    Reflect.compare(v2.fname, v1.fname);
+            }
+        });
         final buf = new StringBuf();
 
         buf.add(
