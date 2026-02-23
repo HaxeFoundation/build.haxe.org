@@ -28,8 +28,6 @@ build.haxe.org:
     COPY package.json .
     COPY +node-modules-prod/node_modules node_modules
     COPY +index.js/index.js .
-    ENV HXBUILDS_AWS_ACCESS_KEY_ID
-    ENV HXBUILDS_AWS_SECRET_ACCESS_KEY
     EXPOSE 3000
     CMD ["node", "index.js"]
     ARG EARTHLY_GIT_HASH
@@ -39,5 +37,5 @@ build.haxe.org:
 run:
     LOCALLY
     WITH DOCKER --load build.haxe.org:latest=+build.haxe.org
-        RUN docker run -p 3000:3000 -e HXBUILDS_AWS_ACCESS_KEY_ID -e HXBUILDS_AWS_SECRET_ACCESS_KEY build.haxe.org
+        RUN docker run --rm -p 3000:3000 -e HXBUILDS_ACCESS_KEY_ID -e HXBUILDS_SECRET_ACCESS_KEY -e HXBUILDS_ENDPOINT -e HXBUILDS_FORCE_PATH_STYLE -e HXBUILDS_BUCKET build.haxe.org
     END
