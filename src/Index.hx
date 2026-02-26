@@ -121,9 +121,6 @@ class Index {
                     }
                     final actual = result.files.find(r -> r.fname != fileName && r.etag == latest.etag);
                     if (actual != null) {
-                        final maxAge = 60 * 5; // 5 minutes
-                        final staleWhileRevalidate = 60 * 1; // 1 minutes
-                        res.setHeader("Cache-Control", 'public, max-age=${maxAge}, stale-while-revalidate=$staleWhileRevalidate');
                         res.redirect(actual.fname);
                         return;
                     }
