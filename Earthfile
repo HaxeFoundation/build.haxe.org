@@ -1,6 +1,6 @@
 VERSION 0.8
 
-FROM node:24.22.2
+FROM node:26.13.1
 WORKDIR /app
 
 node-modules-prod:

@@ -2,4 +2,4 @@
 earthly = "0.8.16"
 
 # keep in sync with Earthfile
-node = "24.22.2"
+node = "26.13.1"
