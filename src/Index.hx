@@ -165,7 +165,7 @@ class Index {
                     }
                 })
                 .catchError(function(err) {
-                    switch (err.code) {
+                    switch (err.name) {
                         case "NoSuchKey" | "NotFound":
                             res.status(404);
                             res.header('Content-Type', 'text/plain');
